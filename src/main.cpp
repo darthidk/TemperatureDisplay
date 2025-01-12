@@ -13,13 +13,13 @@ int recent_switch = 0;
 int light = 1;
 
 unsigned long int time = 0;
-float peakTemp = 0;
+float highTemp = 0;
 float lowTemp = 99999;
-float peakHourTemp = 0;
-float peakTempPrev[6] = {0,0,0,0,0,0};
+float highHourTemp = 0;
+float highTempPrev[6] = {0,0,0,0,0,0};
 float lowHourTemp = 99999;
 float lowTempPrev[6] = {99999,99999,99999,99999,99999,99999};
-int peakTime = 0;
+int highTime = 0;
 int lowTime = 0;
 int interval = 60*60;
 
@@ -42,19 +42,19 @@ int tempLEDcalc(int start, int end, int cur, int ledmax) {
   return (val < 0 || val > ledmax) ? 0 : val;
 }
 
-int tempListUpdates(int* time, int* peakTemp, int* tempList[]) {
-  if (*tempList[0] == *peakTemp) {
+int tempListUpdates(int* time, float* hourTemp, float* tempList) {
+  if (tempList[0] == *hourTemp) {
     for(int i = 1; i < 6; i++) {
-      if (*peakTemp < *tempList[i]) {
-        *peakTemp = *tempList[i];
+      if (*hourTemp < tempList[i]) {
+        *hourTemp = tempList[i];
         *time = 0;
       }
     }
   }
   for(int i = 0; i < 5; i++) {
-    *tempList[i] = *tempList[i+1];
+    tempList[i] = tempList[i+1];
   }
-  *tempList[5] = 0; 
+  tempList[5] = 0; 
 }
 
 void setup() {
@@ -78,14 +78,14 @@ void loop() {
   float temp = ((sensorVal/1024.0) * 5.0 - .5) * 100;
 
   // Updating the peak temperature over a 10 minute interval
-  // If the 10 min peak is changed, also check the hourly peak and then the overall peak as well
-  if (temp > peakTempPrev[5]) {
-    peakTempPrev[5] = temp;
-    if (temp > peakHourTemp) {
-      peakHourTemp = temp;
-      peakTime = 0;
-      if (temp > peakTemp) {
-        peakTemp = temp;
+  // If the 10 min high is changed, also check the hourly peak and then the overall peak as well
+  if (temp > highTempPrev[5]) {
+    highTempPrev[5] = temp;
+    if (temp > highHourTemp) {
+      highHourTemp = temp;
+      highTime = 0;
+      if (temp > highTemp) {
+        highTemp = temp;
       } 
     }
   } else if (temp < lowTempPrev[5]) {
@@ -100,35 +100,12 @@ void loop() {
   }  
   
   // Every 10 minutes, update list containing the peak temperatures of last 10 minutes
-  if (peakTime%(interval/6) == 0 && peakTime != 0) {
-    if (peakTempPrev[0] == peakHourTemp) {
-      for(int i = 1; i < 6; i++) {
-        if (peakHourTemp < peakTempPrev[i]) {
-          peakHourTemp = peakTempPrev[i];
-          peakTime = 0;
-        }
-      }
-    }
-    for(int i = 0; i < 5; i++) {
-      peakTempPrev[i] = peakTempPrev[i+1];
-    }
-    peakTempPrev[5] = 0; 
+  if (highTime%(interval/6) == 0 && highTime != 0) {
+    tempListUpdates(&highTime, &highHourTemp, highTempPrev);
   }
 
   if (lowTime%(interval/6) == 0 && lowTime != 0) {
-    if (lowTempPrev[0] == lowHourTemp) {
-      lowHourTemp = 99999;
-      for(int i = 1; i < 6; i++) {
-        if (lowHourTemp > lowTempPrev[i]) {
-          lowHourTemp = lowTempPrev[i];
-          lowTime = 0;
-        }
-      }
-    }
-    for(int i = 0; i < 5; i++) {
-      lowTempPrev[i] = lowTempPrev[i+1];
-    } 
-    lowTempPrev[5] = 99999;
+    tempListUpdates(&lowTime, &lowHourTemp, lowTempPrev);
   }
 
   // Button to enable LED being on and off
@@ -162,7 +139,7 @@ void loop() {
   if (time%interval/5%4 == 0) {
     lcd.setCursor(9,0);
     lcd.print("H:");
-    lcd.print(peakTemp);
+    lcd.print(highTemp);
   } else if (time%interval/5%4 == 1) {
     lcd.setCursor(9,0);
     lcd.print("L:");
@@ -170,7 +147,7 @@ void loop() {
   } else if (time%interval/5%4 == 2) {
     lcd.setCursor(8,0);
     lcd.print("H1:");
-    lcd.print(peakHourTemp);
+    lcd.print(highHourTemp);
   } else {
     lcd.setCursor(8,0);
     lcd.print("L1:");
@@ -207,7 +184,7 @@ void loop() {
 
   // Incrementing time
   time++;
-  peakTime++;
+  highTime++;
   lowTime++;
   delay(1000);
 }
