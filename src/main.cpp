@@ -42,8 +42,22 @@ int tempLEDcalc(int start, int end, int cur, int ledmax) {
   return (val < 0 || val > ledmax) ? 0 : val;
 }
 
+int tempListUpdates(int* time, int* peakTemp, int* tempList[]) {
+  if (*tempList[0] == *peakTemp) {
+    for(int i = 1; i < 6; i++) {
+      if (*peakTemp < *tempList[i]) {
+        *peakTemp = *tempList[i];
+        *time = 0;
+      }
+    }
+  }
+  for(int i = 0; i < 5; i++) {
+    *tempList[i] = *tempList[i+1];
+  }
+  *tempList[5] = 0; 
+}
+
 void setup() {
-  Serial.begin(9600);
   lcd.begin(16,2);
 
   pinMode(greenLEDPin, OUTPUT);
@@ -88,36 +102,21 @@ void loop() {
   // Every 10 minutes, update list containing the peak temperatures of last 10 minutes
   if (peakTime%(interval/6) == 0 && peakTime != 0) {
     if (peakTempPrev[0] == peakHourTemp) {
-      Serial.print("10 minute check, getting new peakHourTemp, old temp: ");
-      Serial.print(peakHourTemp);
-      peakHourTemp = 0;
       for(int i = 1; i < 6; i++) {
         if (peakHourTemp < peakTempPrev[i]) {
           peakHourTemp = peakTempPrev[i];
           peakTime = 0;
         }
       }
-      Serial.print(" New temperature: ");
-      Serial.println(peakHourTemp);
     }
-    Serial.print("Updating list now: ");
     for(int i = 0; i < 5; i++) {
       peakTempPrev[i] = peakTempPrev[i+1];
-      Serial.print(peakTempPrev[i]);
-      Serial.print(" ");
     }
-    Serial.print("");
-    Serial.print(" Time: ");
-    Serial.print(time);
-    Serial.print(" Peak time: ");
-    Serial.println(peakTime);
     peakTempPrev[5] = 0; 
   }
 
   if (lowTime%(interval/6) == 0 && lowTime != 0) {
     if (lowTempPrev[0] == lowHourTemp) {
-      Serial.print("10 minute check, getting new lowHourTemp, old temp: ");
-      Serial.print(lowHourTemp);
       lowHourTemp = 99999;
       for(int i = 1; i < 6; i++) {
         if (lowHourTemp > lowTempPrev[i]) {
@@ -125,19 +124,10 @@ void loop() {
           lowTime = 0;
         }
       }
-      Serial.print(" New temperature: ");
-      Serial.println(lowHourTemp);
     }
-    Serial.print("Updating list now: ");
     for(int i = 0; i < 5; i++) {
       lowTempPrev[i] = lowTempPrev[i+1];
-      Serial.print(lowTempPrev[i]);
-      Serial.print(" ");
     } 
-    Serial.print(" Time: ");
-    Serial.print(time);
-    Serial.print(" Low time: ");
-    Serial.println(lowTime);
     lowTempPrev[5] = 99999;
   }
 
@@ -169,15 +159,15 @@ void loop() {
   lcd.print("C");
 
   // Rotating every 5 seconds between overall peak and low and hourly peak and low
-  if (time%60/5%4 == 0) {
+  if (time%interval/5%4 == 0) {
     lcd.setCursor(9,0);
     lcd.print("H:");
     lcd.print(peakTemp);
-  } else if (time%60/5%4 == 1) {
+  } else if (time%interval/5%4 == 1) {
     lcd.setCursor(9,0);
     lcd.print("L:");
     lcd.print(lowTemp);
-  } else if (time%60/5%4 == 2) {
+  } else if (time%interval/5%4 == 2) {
     lcd.setCursor(8,0);
     lcd.print("H1:");
     lcd.print(peakHourTemp);
