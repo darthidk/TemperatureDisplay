@@ -83,62 +83,7 @@ void loop() {
         lowTemp = temp;
       }
     }
-  }
-
-
-
-  // Reset the timers when the timers is over an hour old
-  // Also update the list at the same time
-  if (peakTime/(interval) == 1) {
-    Serial.print("Peak temperature over an hour old. Old temperature: ");
-    Serial.print(peakHourTemp);
-    peakHourTemp = 0;
-    for(int i = 1; i < 6; i++) {
-      if (peakHourTemp < peakTempPrev[i]) {
-        peakHourTemp = peakTempPrev[i];
-        peakTime = 0;
-      }
-    }
-    for(int i = 0; i < 5; i++) {
-      peakTempPrev[i] = peakTempPrev[i+1];
-    }
-    peakTempPrev[5] = 0;
-    Serial.print(" New temperature: ");
-    Serial.println(peakHourTemp);
-    Serial.print(" Time: ");
-    Serial.print(time);
-    Serial.print(" Peak time: ");
-    Serial.println(peakTime);
-  } 
-
-  if (lowTime/(interval) == 1) {
-    Serial.print("Low temperature over an hour old. Old temperature: ");
-    Serial.print(lowHourTemp);
-    lowHourTemp = 9999;
-    for(int i = 1; i < 6; i++) {
-      if (lowHourTemp > lowTempPrev[i]) {
-        lowHourTemp = lowTempPrev[i];
-        lowTime = 0;
-      }
-    }
-    Serial.print("Updating list now: ");
-    for(int i = 0; i < 5; i++) {
-      lowTempPrev[i] = lowTempPrev[i+1];
-      Serial.print(lowTempPrev[i]);
-      Serial.print(" ");
-    } 
-    lowTempPrev[5] = 99999;
-    Serial.print(" New temperature: ");
-    Serial.print(lowHourTemp);
-    Serial.print(" Time: ");
-    Serial.print(time);
-    Serial.print(" Low time: ");
-    Serial.println(lowTime);
-  }
-
-
-
-  
+  }  
   
   // Every 10 minutes, update list containing the peak temperatures of last 10 minutes
   if (peakTime%(interval/6) == 0 && peakTime != 0) {
