@@ -21,7 +21,7 @@ float lowHourTemp = 99999;
 float lowTempPrev[6] = {99999,99999,99999,99999,99999,99999};
 int highTime = 0;
 int lowTime = 0;
-int interval = 60*60;
+unsigned int interval = 60*60;
 
 byte deg[8] = {
   0b01110,
@@ -42,7 +42,7 @@ int tempLEDcalc(int start, int end, int cur, int ledmax) {
   return (val < 0 || val > ledmax) ? 0 : val;
 }
 
-int tempListUpdates(int* time, float* hourTemp, float* tempList) {
+void tempListUpdates(int* time, float* hourTemp, float* tempList) {
   if (tempList[0] == *hourTemp) {
     for(int i = 1; i < 6; i++) {
       if (*hourTemp < tempList[i]) {
