@@ -1,13 +1,14 @@
 /*
 Plan:
-//Store settings on EEPROM memory in the arduino (Arduino UNO has 1024 bytes using ATmega328P)
-//During setup read EEPROM memory and use overwrite default values
-Upload settings via USB serial connection to board
+// Store settings on EEPROM memory in the arduino (Arduino UNO has 1024 bytes using ATmega328P)
+// During setup read EEPROM memory and use overwrite default values
+// Upload settings via USB serial connection to board
 Upload file from serial connection as well from GUI
 */
 
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <ctype.h>
 #include <LiquidCrystal.h>
 LiquidCrystal lcd(12,11,5,4,3,2);
 
@@ -54,6 +55,7 @@ int tempLEDcalc(int start, int end, int cur, int ledmax) {
 	return (val < 0 || val > ledmax) ? 0 : val;
 }
 
+
 void tempListUpdates(int* time, float* hourTemp, float* tempList) {
 	if (tempList[0] == *hourTemp) {
 		for(int i = 1; i < 6; i++) {
@@ -67,6 +69,62 @@ void tempListUpdates(int* time, float* hourTemp, float* tempList) {
 		tempList[i] = tempList[i+1];
 	}
 	tempList[5] = 0;
+}
+
+// void debuglcd(char in) {
+// 	if (isalpha(in)) {
+// 		lcd.clear();
+// 		lcd.setCursor(0,0);
+// 	}
+// 	lcd.print(in);
+// 	delay(1000);
+// }
+
+int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
+	if (!Serial || Serial.available() == 0) {
+		return 0;
+	} else {
+		/* Input is the CSV settings.txt file saved in qt gui
+		L|0|0|
+		M|0|0|
+		H|0|0|
+		P|1|0|
+		;  */
+		
+		String in_str;
+		int eeprom_index = 0;
+		while (Serial.available() != 0) {
+			if ((isalpha(Serial.peek()) && ((in_str.length() != 0))) || Serial.peek() == ';') {
+				int i = 2;
+				String val;
+				while(in_str[i] != '|') {
+					val += in_str[i];
+					i++;
+				}
+				EEPROM.update(eeprom_index++, val.toInt());
+				i += 1;
+				val.remove(0, val.length());
+				while(in_str[i] != '|') {
+					val += in_str[i];
+					i++;
+				}
+				EEPROM.update(eeprom_index++, val.toInt());
+
+				in_str.remove(0, in_str.length());
+				if (Serial.peek() == ';') {
+					while (Serial.available() != 0) {
+						Serial.read();
+					}
+					break;
+				} else {
+					in_str.concat((char)Serial.read());
+				}
+			} else {
+				in_str.concat((char)Serial.read());
+			}
+		}
+		return 1;
+	}
 }
 
 void setup() {
@@ -91,13 +149,44 @@ void setup() {
 	7: lock led setting/disable button (def: 0)
 	*/
 
+	int delay_time = 1000;
+
+	lcd.clear();
+	lcd.setCursor(0,0);
+	lcd.write("Displaying Settings");
+	delay(delay_time);
+
+	serialReadUpdate(led_bounds, &light_on, &led_lock);
 
 	for(int i = 0; i < 6; i++) {
 		led_bounds[i] = EEPROM.read(i);
+		lcd.clear();
+		lcd.setCursor(0,0);
+		lcd.write("LED Bound ");
+		lcd.print(i);
+		lcd.write(": ");
+		lcd.print(led_bounds[i]);
+
+		led_bounds[i] = EEPROM.read(++i);
+		lcd.setCursor(0,1);
+		lcd.write("LED Bound ");
+		lcd.print(i);
+		lcd.write(": ");
+		lcd.print(led_bounds[i]);
+
+		delay(delay_time);
 	}
 	light_on = EEPROM.read(6);
-	led_lock = EEPROM.read(7);
+	lcd.clear();
+	lcd.setCursor(0,0);
+	lcd.write("LED On: ");
+	lcd.print(light_on);
 
+	led_lock = EEPROM.read(7);
+	lcd.setCursor(0,1);
+	lcd.write("LED Lock On: ");
+	lcd.print(led_lock);
+	delay(delay_time);
 }
 
 void loop() {
@@ -148,8 +237,8 @@ void loop() {
 	if (light_on == 1) {
 		analogWrite(blueLEDPin, tempLEDcalc(led_bounds[0], led_bounds[1], temp, 255));
 		analogWrite(greenLEDPin, tempLEDcalc(led_bounds[2], led_bounds[3], temp, 190));
-		analogWrite(redLEDPin, tempLEDcalc(led_bounds[4], led_bounds[5], temp, 255));
-		if (temp >= 33) {
+		analogWrite(redLEDPin, tempLEDcalc(led_bounds[4], led_bounds[5], temp, 200));
+		if (temp >= led_bounds[5]) {
 			analogWrite(redLEDPin, 255);
 		}
 	}
@@ -165,7 +254,7 @@ void loop() {
 
 	// Rotating every 5 seconds between overall peak and low and hourly peak and low
 	if (time%interval/5%4 == 0) {
-		lcd.setCursor(9,0);
+		lcd.setCursor(9,0);	
 		lcd.print("H:");
 		lcd.print(highTemp);
 	} else if (time%interval/5%4 == 1) {
@@ -209,6 +298,13 @@ void loop() {
 		lcd.setCursor(8, 1);
 		lcd.print(time/60/60);
 		}
+
+	if (serialReadUpdate(led_bounds, &light_on, &led_lock) == 1) {
+		lcd.setCursor(0,0);
+		lcd.clear();
+		lcd.print("Settings updated");
+	}
+	
 
 	// Incrementing time
 	time++;
