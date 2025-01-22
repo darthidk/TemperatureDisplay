@@ -10,16 +10,17 @@ Upload file from serial connection as well from GUI
 #include <EEPROM.h>
 #include <ctype.h>
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(12,11,5,4,3,2);
+LiquidCrystal lcd(5,6,7,8,9,10);
 
-const int greenLEDPin = 10;
-const int redLEDPin = 8;
-const int blueLEDPin = 9;
-const int tempPin = A0;
-const int switchPin = 13;
+const int greenLEDPin = 13;
+const int redLEDPin = 11;
+const int blueLEDPin = 12;
+const int tempPin = A5;
+const int switchLEDPin = 2;
+const int switchSettingsPin = 3;
 
-int switchState = 0;
-int recent_switch = 0;
+int switchLEDState = 0;
+int switchSettingsState = 0;
 int light_on = 1;
 
 unsigned long int time = 0;
@@ -71,6 +72,7 @@ void tempListUpdates(int* time, float* hourTemp, float* tempList) {
 	tempList[5] = 0;
 }
 
+// Use for debugging serial and checking what the arduino is receiving
 // void debuglcd(char in) {
 // 	if (isalpha(in)) {
 // 		lcd.clear();
@@ -127,28 +129,7 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 	}
 }
 
-void setup() {
-	lcd.begin(16,2);
-	Serial.begin(9600);
-
-	pinMode(greenLEDPin, OUTPUT);
-	pinMode(redLEDPin, OUTPUT);
-	pinMode(blueLEDPin, OUTPUT);
-	pinMode(switchPin, INPUT);
-
-	analogWrite(greenLEDPin, 0);
-	analogWrite(redLEDPin, 0);
-	analogWrite(blueLEDPin, 0);
-
-	lcd.createChar(0, deg);
-
-	/* EEPROM Number Values:
-	0-5: values for low and high bounds of led light settings
-	Resulting default array: [0, 23, 18, 31, 25, 33]
-	6: led power on (def: 1)
-	7: lock led setting/disable button (def: 0)
-	*/
-
+void displaySettings() {
 	int delay_time = 1000;
 
 	lcd.clear();
@@ -189,8 +170,42 @@ void setup() {
 	delay(delay_time);
 }
 
+void setup() {
+	lcd.begin(16,2);
+	Serial.begin(9600);
+
+	pinMode(greenLEDPin, OUTPUT);
+	pinMode(redLEDPin, OUTPUT);
+	pinMode(blueLEDPin, OUTPUT);
+	pinMode(switchLEDPin, INPUT);
+	pinMode(switchSettingsPin, INPUT);
+
+	if (light_on == 1) {
+		analogWrite(greenLEDPin, 255);
+		analogWrite(redLEDPin, 255);
+		analogWrite(blueLEDPin, 255);
+	} else {
+		analogWrite(greenLEDPin, 0);
+		analogWrite(redLEDPin, 0);
+		analogWrite(blueLEDPin, 0);
+	}
+	
+
+	lcd.createChar(0, deg);
+
+	/* EEPROM Number Values:
+	0-5: values for low and high bounds of led light settings
+	Resulting default array: [0, 23, 18, 31, 25, 33]
+	6: led power on (def: 1)
+	7: lock led setting/disable button (def: 0)
+	*/
+
+	displaySettings();
+}
+
 void loop() {
-	switchState = digitalRead(switchPin);
+	switchLEDState = digitalRead(switchLEDPin);
+	switchSettingsState = digitalRead(switchSettingsPin);
 	int sensorVal = analogRead(tempPin);
 	float temp = ((sensorVal/1024.0) * 5.0 - .5) * 100;
 
@@ -225,24 +240,6 @@ void loop() {
 		tempListUpdates(&lowTime, &lowHourTemp, lowTempPrev);
 	}
 
-	// Button to enable LED being on and off
-	if (switchState == HIGH && led_lock != 0) {
-		if (light_on == 0) {
-			light_on = 1;
-		} else {
-			light_on = 0;
-		}
-	}
-
-	if (light_on == 1) {
-		analogWrite(blueLEDPin, tempLEDcalc(led_bounds[0], led_bounds[1], temp, 255));
-		analogWrite(greenLEDPin, tempLEDcalc(led_bounds[2], led_bounds[3], temp, 190));
-		analogWrite(redLEDPin, tempLEDcalc(led_bounds[4], led_bounds[5], temp, 200));
-		if (temp >= led_bounds[5]) {
-			analogWrite(redLEDPin, 255);
-		}
-	}
-
 	// Writing to LCD Screen
 	// Current temp
 	lcd.clear();
@@ -252,7 +249,7 @@ void loop() {
 	lcd.write(byte(0));
 	lcd.print("C");
 
-	// Rotating every 5 seconds between overall peak and low and hourly peak and low
+	// Rotating every 5 seconds  between overall peak and low and hourly peak and low
 	if (time%interval/5%4 == 0) {
 		lcd.setCursor(9,0);	
 		lcd.print("H:");
@@ -303,6 +300,33 @@ void loop() {
 		lcd.setCursor(0,0);
 		lcd.clear();
 		lcd.print("Settings updated");
+	}
+
+	// Button to enable LED being on and off
+	if (switchLEDState == HIGH && led_lock == 0) {
+		lcd.clear();
+		lcd.setCursor(0,0);
+		if (light_on == 0) {
+			light_on = 1;
+			lcd.print("Light On");
+		} else {
+			light_on = 0;
+			lcd.print("Light Off");
+		}
+	}
+
+	if (switchSettingsState == HIGH) {
+		Serial.print("settings button");
+		displaySettings();
+	}
+
+	if (light_on == 1) {
+		analogWrite(blueLEDPin, tempLEDcalc(led_bounds[0], led_bounds[1], temp, 255));
+		analogWrite(greenLEDPin, tempLEDcalc(led_bounds[2], led_bounds[3], temp, 190));
+		analogWrite(redLEDPin, tempLEDcalc(led_bounds[4], led_bounds[5], temp, 200));
+		if (temp >= led_bounds[5]) {
+			analogWrite(redLEDPin, 255);
+		}
 	}
 	
 
