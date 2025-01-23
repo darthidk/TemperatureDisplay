@@ -10,11 +10,11 @@ Upload file from serial connection as well from GUI
 #include <EEPROM.h>
 #include <ctype.h>
 #include <LiquidCrystal.h>
-LiquidCrystal lcd(5,6,7,8,9,10);
+LiquidCrystal lcd(5,6,7,8,12,13);
 
-const int greenLEDPin = 13;
-const int redLEDPin = 11;
-const int blueLEDPin = 12;
+const int greenLEDPin = 11;
+const int redLEDPin = 9;
+const int blueLEDPin = 10;
 const int tempPin = A5;
 const int switchLEDPin = 2;
 const int switchSettingsPin = 3;
@@ -201,6 +201,35 @@ void setup() {
 	*/
 
 	displaySettings();
+
+	// for(int k = 0; k < 3; k++) {
+	// analogWrite(greenLEDPin, 0);
+	// analogWrite(redLEDPin, 0);
+	// analogWrite(blueLEDPin, 0);
+	// lcd.clear();
+	// lcd.setCursor(0,0);
+	// if (k == 0) {
+	// 	lcd.print("green");
+	// } else if (k == 1) {
+	// 	lcd.print("red");
+	// } else if (k == 2)  {
+	// 	lcd.print("blue");
+	// }
+	// 	for(int i = 0; i < 100; i++) {
+	// 		lcd.setCursor(0,1);
+	// 		if (k == 0) {
+	// 			analogWrite(greenLEDPin, i);
+	// 			lcd.print(i);
+	// 		} else if (k == 1) {
+	// 			analogWrite(redLEDPin, i);
+	// 			lcd.print(i);
+	// 		} else if (k == 2)  {
+	// 			analogWrite(blueLEDPin, i);
+	// 			lcd.print(i);
+	// 		}
+	// 		delay(50);
+	// 	}
+	// }
 }
 
 void loop() {
@@ -320,6 +349,9 @@ void loop() {
 		displaySettings();
 	}
 
+	analogWrite(blueLEDPin, 0);
+	analogWrite(greenLEDPin, 0);
+	analogWrite(redLEDPin, 0);
 	if (light_on == 1) {
 		analogWrite(blueLEDPin, tempLEDcalc(led_bounds[0], led_bounds[1], temp, 255));
 		analogWrite(greenLEDPin, tempLEDcalc(led_bounds[2], led_bounds[3], temp, 190));
@@ -334,6 +366,7 @@ void loop() {
 	time++;
 	highTime++;
 	lowTime++;
+	temp++;
 
 
 	delay(1000);
