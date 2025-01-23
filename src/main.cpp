@@ -21,7 +21,6 @@ const int switchSettingsPin = 3;
 
 int switchLEDState = 0;
 int switchSettingsState = 0;
-int light_on = 1;
 
 unsigned long int time = 0;
 float highTemp = 0;
@@ -34,9 +33,11 @@ int highTime = 0;
 int lowTime = 0;
 unsigned int interval = 60*60;
 
+int light_on = 1;
 int led_bounds[6];
 int led_lock = 0;
 
+// Degree symbol
 byte deg[8] = {
 	0b01110,
 	0b01010,
@@ -48,15 +49,19 @@ byte deg[8] = {
 	0b00000
 };
 
+// Detemines the brightness of the colour for the LED based on the temperature and min/max temps and brightness
 int tempLEDcalc(int start, int end, int cur, int ledmax) {
 	int val = ledmax * (cur - start)/(end - start);
+	if ((end - cur) < (end - start)/6) {
+		val = min(ledmax, val * (3 + (end - cur)) / 6);
+	}
 	if (cur <= 0) {
 		return 255;
 	}
 	return (val < 0 || val > ledmax) ? 0 : val;
 }
 
-
+// Updates the array containing the the 10 minute peak temperatures, moving each element up by 1
 void tempListUpdates(int* time, float* hourTemp, float* tempList) {
 	if (tempList[0] == *hourTemp) {
 		for(int i = 1; i < 6; i++) {
@@ -72,7 +77,7 @@ void tempListUpdates(int* time, float* hourTemp, float* tempList) {
 	tempList[5] = 0;
 }
 
-// Use for debugging serial and checking what the arduino is receiving
+// * Use for debugging serial and checking what the arduino is receiving
 // void debuglcd(char in) {
 // 	if (isalpha(in)) {
 // 		lcd.clear();
@@ -82,17 +87,16 @@ void tempListUpdates(int* time, float* hourTemp, float* tempList) {
 // 	delay(1000);
 // }
 
+// Reading in settings updates from serial using the format below
+// 		L|0|0|
+// 		M|0|0|
+// 		H|0|0|
+// 		P|1|0|
+//      ;
 int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 	if (!Serial || Serial.available() == 0) {
 		return 0;
-	} else {
-		/* Input is the CSV settings.txt file saved in qt gui
-		L|0|0|
-		M|0|0|
-		H|0|0|
-		P|1|0|
-		;  */
-		
+	} else {	
 		String in_str;
 		int eeprom_index = 0;
 		while (Serial.available() != 0) {
@@ -129,8 +133,8 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 	}
 }
 
-void displaySettings() {
-	int delay_time = 1000;
+// Displays the current settings on the led screen
+void displaySettings(int delay_time) {
 
 	lcd.clear();
 	lcd.setCursor(0,0);
@@ -170,6 +174,7 @@ void displaySettings() {
 	delay(delay_time);
 }
 
+// Initial code execution 
 void setup() {
 	lcd.begin(16,2);
 	Serial.begin(9600);
@@ -200,8 +205,9 @@ void setup() {
 	7: lock led setting/disable button (def: 0)
 	*/
 
-	displaySettings();
+	displaySettings(500);
 
+	// * Code which can be used for testing each colour of the LED individually
 	// for(int k = 0; k < 3; k++) {
 	// analogWrite(greenLEDPin, 0);
 	// analogWrite(redLEDPin, 0);
@@ -232,6 +238,7 @@ void setup() {
 	// }
 }
 
+// Repeated code
 void loop() {
 	switchLEDState = digitalRead(switchLEDPin);
 	switchSettingsState = digitalRead(switchSettingsPin);
@@ -325,6 +332,8 @@ void loop() {
 		lcd.print(time/60/60);
 		}
 
+
+	// Reading in new settings from serial and updating if found
 	if (serialReadUpdate(led_bounds, &light_on, &led_lock) == 1) {
 		lcd.setCursor(0,0);
 		lcd.clear();
@@ -344,29 +353,30 @@ void loop() {
 		}
 	}
 
+	// Button to display settings
 	if (switchSettingsState == HIGH) {
 		Serial.print("settings button");
-		displaySettings();
+		displaySettings(1000);
 	}
 
+	// Setting LED colour and brightness
 	analogWrite(blueLEDPin, 0);
 	analogWrite(greenLEDPin, 0);
 	analogWrite(redLEDPin, 0);
 	if (light_on == 1) {
-		analogWrite(blueLEDPin, tempLEDcalc(led_bounds[0], led_bounds[1], temp, 255));
-		analogWrite(greenLEDPin, tempLEDcalc(led_bounds[2], led_bounds[3], temp, 190));
-		analogWrite(redLEDPin, tempLEDcalc(led_bounds[4], led_bounds[5], temp, 200));
+		analogWrite(blueLEDPin, tempLEDcalc(led_bounds[0], led_bounds[1], temp, 100));
+		analogWrite(greenLEDPin, tempLEDcalc(led_bounds[2], led_bounds[3], temp, 100));
+		analogWrite(redLEDPin, tempLEDcalc(led_bounds[4], led_bounds[5], temp, 100));
 		if (temp >= led_bounds[5]) {
 			analogWrite(redLEDPin, 255);
 		}
 	}
 	
 
-	// Incrementing time
+	// Incrementing time and other related values
 	time++;
 	highTime++;
 	lowTime++;
-	temp++;
 
 
 	delay(1000);
