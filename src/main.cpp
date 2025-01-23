@@ -174,6 +174,39 @@ void displaySettings(int delay_time) {
 	delay(delay_time);
 }
 
+void setup() {
+	lcd.begin(16,2);
+	Serial.begin(9600);
+
+	pinMode(greenLEDPin, OUTPUT);
+	pinMode(redLEDPin, OUTPUT);
+	pinMode(blueLEDPin, OUTPUT);
+	pinMode(switchLEDPin, INPUT);
+	pinMode(switchSettingsPin, INPUT);
+
+	if (light_on == 1) {
+		analogWrite(greenLEDPin, 255);
+		analogWrite(redLEDPin, 255);
+		analogWrite(blueLEDPin, 255);
+	} else {
+		analogWrite(greenLEDPin, 0);
+		analogWrite(redLEDPin, 0);
+		analogWrite(blueLEDPin, 0);
+	}
+	
+
+	lcd.createChar(0, deg);
+
+	/* EEPROM Number Values:
+	0-5: values for low and high bounds of led light settings
+	Resulting default array: [0, 23, 18, 31, 25, 33]
+	6: led power on (def: 1)
+	7: lock led setting/disable button (def: 0)
+	*/
+
+	displaySettings();
+}
+
 // Initial code execution 
 void setup() {
 	lcd.begin(16,2);
@@ -242,6 +275,8 @@ void setup() {
 void loop() {
 	switchLEDState = digitalRead(switchLEDPin);
 	switchSettingsState = digitalRead(switchSettingsPin);
+	switchLEDState = digitalRead(switchLEDPin);
+	switchSettingsState = digitalRead(switchSettingsPin);
 	int sensorVal = analogRead(tempPin);
 	float temp = ((sensorVal/1024.0) * 5.0 - .5) * 100;
 
@@ -285,6 +320,7 @@ void loop() {
 	lcd.write(byte(0));
 	lcd.print("C");
 
+	// Rotating every 5 seconds  between overall peak and low and hourly peak and low
 	// Rotating every 5 seconds  between overall peak and low and hourly peak and low
 	if (time%interval/5%4 == 0) {
 		lcd.setCursor(9,0);	
