@@ -85,14 +85,14 @@ void splitter(String in_str, char splitter, int arr[], int total_splits) {
 }
 
 // * Use for debugging serial and checking what the arduino is receiving
-// void debuglcd(char in) {
-// 	if (isalpha(in)) {
-// 		lcd.clear();
-// 		lcd.setCursor(0,0);
-// 	}
-// 	lcd.print(in);
-// 	delay(1000);
-// }
+void debuglcd(char in) {
+	if (isalpha(in)) {
+		lcd.clear();
+		lcd.setCursor(0,0);
+	}
+	lcd.print(in);
+	delay(1000);
+}
 
 // Reading in settings updates from serial using the format below
 	// 	L|0|0|
@@ -103,10 +103,19 @@ void splitter(String in_str, char splitter, int arr[], int total_splits) {
 int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 	if (!Serial || Serial.available() == 0) {
 		return 0;
-	} else {	
-		while (Serial.available() != 0) {
-			String serial_classification = Serial.readString();
-			if (serial_classification == "settings") {
+	} else {
+		char serial_classification = Serial.read();
+		debuglcd(serial_classification);
+		if (serial_classification == 'S') {
+			lcd.clear();
+			lcd.setCursor(0,0);
+			lcd.print("Detected changes");
+			lcd.setCursor(0,1);
+			lcd.print("to settings");
+			delay(1000);
+			while (Serial.available() != 0) {
+			// 	debuglcd(Serial.read());
+			// 	continue;
 				String in_str;
 				int eeprom_index = 0;
 				if ((isalpha(Serial.peek()) && ((in_str.length() != 0))) || Serial.peek() == ';') {
@@ -137,7 +146,15 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 				} else {
 					in_str.concat((char)Serial.read());
 				}
-			} else if (serial_classification == "pins") {
+			}
+		} else if (serial_classification == 'P') {
+			lcd.clear();
+			lcd.setCursor(0,0);
+			lcd.print("Detected changes");
+			lcd.setCursor(0,1);
+			lcd.print("to pins");
+			delay(1000);
+			while (Serial.available() != 0) {
 				// Input String should be 'A5|1|Temperature Sensor|'
 				String in_str = Serial.readString();
 				int num_splits = 3;
@@ -162,7 +179,7 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 					EEPROM.update(8, tempPin);
 				} else if (sub_str == "Settings Display Button") {
 					switchSettingsPin = pin;
-					EEPROM.update(9, tempPin);
+					EEPROM.update(9, switchSettingsPin);
 				} else if (sub_str == "LED On/Off Button") {
 					switchLEDPin = pin;
 					EEPROM.update(10, switchLEDPin);
@@ -176,8 +193,17 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 					blueLEDPin = pin;
 					EEPROM.update(13, blueLEDPin);
 				}
-			}	
+			}
+		} else {
+			lcd.clear();
+			lcd.print("Clearing serial");
+			while(Serial.available() != 0) {
+				Serial.read();
+			}
 		}
+		lcd.clear();
+		lcd.print("Serial read");
+		delay(1000);
 		return 1;
 	}
 }
@@ -221,7 +247,7 @@ void displaySettings(int delay_time) {
 		lcd.write("LED Bound ");
 		lcd.print(i);
 		lcd.write(": ");
-		lcd.print(led_bounds[i]);
+		lcd.print(led_bounds[i++]);
 
 		lcd.setCursor(0,1);
 		lcd.write("LED Bound ");
@@ -278,7 +304,7 @@ void setup() {
 	Serial.begin(9600);
 	
 	lcd.createChar(0, deg);
-	
+
 	readSettings();
 
 	pinMode(greenLEDPin, OUTPUT);
@@ -290,7 +316,7 @@ void setup() {
 	analogWrite(greenLEDPin, 150 * light_on);
 	analogWrite(redLEDPin, 150 * light_on);
 	analogWrite(blueLEDPin, 150 * light_on);
-	
+
 	displaySettings(500);
 
 	// * Code which can be used for testing each colour of the LED individually
