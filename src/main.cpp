@@ -76,7 +76,7 @@ void tempListUpdates(int* time, float* hourTemp, float* tempList) {
 
 void splitter(String in_str, char splitter, int arr[], int total_splits) {
 	int num_found = 0;
-	for(int i = 0; i < in_str.length() && num_found != total_splits; i++) {
+	for(unsigned int i = 0; i < in_str.length() && num_found != total_splits; i++) {
 		if (in_str.charAt(i) == splitter) {
 			num_found++;
 			arr[i] = in_str.charAt(i);
@@ -113,11 +113,11 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 			lcd.setCursor(0,1);
 			lcd.print("to settings");
 			delay(1000);
+			String in_str;
+			int eeprom_index = 0;
 			while (Serial.available() != 0) {
 			// 	debuglcd(Serial.read());
 			// 	continue;
-				String in_str;
-				int eeprom_index = 0;
 				if ((isalpha(Serial.peek()) && ((in_str.length() != 0))) || Serial.peek() == ';') {
 					int i = 2;
 					String val;
@@ -219,7 +219,8 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 void readSettings() {
 	for(int i = 0; i < 6; i++) {
 		led_bounds[i] = EEPROM.read(i);
-		led_bounds[i] = EEPROM.read(++i);
+		i++;
+		led_bounds[i] = EEPROM.read(i);
 	}
 	light_on = EEPROM.read(6);
 	led_lock = EEPROM.read(7);
