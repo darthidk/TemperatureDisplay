@@ -12,7 +12,7 @@ LiquidCrystal lcd(5,6,7,8,12,13);
 int greenLEDPin = 11;
 int redLEDPin = 9;
 int blueLEDPin = 10;
-int tempPin = A5;
+int tempPin = A4;
 int switchLEDPin = 2;
 int switchSettingsPin = 3;
 
@@ -116,8 +116,6 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 			String in_str;
 			int eeprom_index = 0;
 			while (Serial.available() != 0) {
-			// 	debuglcd(Serial.read());
-			// 	continue;
 				if ((isalpha(Serial.peek()) && ((in_str.length() != 0))) || Serial.peek() == ';') {
 					int i = 2;
 					String val;
@@ -154,9 +152,35 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 			lcd.setCursor(0,1);
 			lcd.print("to pins");
 			delay(1000);
+			lcd.clear();
+			int i = 0;
 			while (Serial.available() != 0) {
 				// Input String should be 'A5|1|Temperature Sensor|'
-				String in_str = Serial.readString();
+				String in_str;
+
+				// int splits_found = 0;
+				// while (splits_found != 3) {
+				// 	if (Serial.peek() == '|') {
+				// 		splits_found++;
+				// 	}
+				// 	in_str += (char)Serial.read();
+				// }
+				if (i == 16) {
+					i = 0;
+					delay(2000);
+					lcd.clear();
+				} else {
+					lcd.print((char)Serial.read());
+					i++;
+					delay(500);
+					continue;
+				}
+
+				lcd.clear();
+				lcd.setCursor(0,0);
+				lcd.print(in_str);
+				delay(1000);
+				
 				int num_splits = 3;
 				int split_locations[num_splits];
 				splitter(in_str, '|', split_locations, num_splits);
@@ -164,7 +188,32 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 				String sub_str = in_str.substring(0, in_str[0]);
 				int pin;
 				if (sub_str[0] == 'A') {
-					pin = sub_str.toInt();	
+					switch (sub_str[1]) {
+						case 0:
+							pin = A0;
+							break;
+						case 1:
+							pin = A1;
+							break;
+						case 2:
+							pin = A2;
+							break;
+						case 3:
+							pin = A3;
+							break;
+						case 4:
+							pin = A4;
+							lcd.print("pin a4 found");
+							break;
+						case 5:
+							pin = A5;
+							break;
+						default:
+							lcd.print("no new pin found");
+							pin = A5;
+							break;
+					}
+					delay(1000);
 				} else if (sub_str[0] == 'D') {
 					if (sub_str[sub_str.length() - 1] == '~') {
 						pin = sub_str.substring(1, sub_str.length() - 2).toInt();
