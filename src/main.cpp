@@ -46,6 +46,15 @@ byte deg[8] = {
 	0b00000
 };
 
+String serialmap[] = {
+    "Temperature Sensor",
+    "Settings Display Button",
+    "LED On/Off Button",
+    "LED Red",
+    "LED Green",
+    "LED Blue"
+};
+
 // Detemines the brightness of the colour for the LED based on the temperature and min/max temps and brightness
 int tempLEDcalc(int start, int end, int cur, int ledmax) {
 	int val = ledmax * (cur - start)/(end - start);
@@ -159,15 +168,15 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 				String in_str;
 
 				// int splits_found = 0;
-				// while (splits_found != 3) {
+				// while (splits_found != 2) {
 				// 	if (Serial.peek() == '|') {
 				// 		splits_found++;
 				// 	}
 				// 	in_str += (char)Serial.read();
 				// }
+				
 				if (i == 16) {
 					i = 0;
-					delay(2000);
 					lcd.clear();
 				} else {
 					lcd.print((char)Serial.read());
@@ -181,7 +190,7 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 				lcd.print(in_str);
 				delay(1000);
 				
-				int num_splits = 3;
+				int num_splits = 2;
 				int split_locations[num_splits];
 				splitter(in_str, '|', split_locations, num_splits);
 
@@ -190,27 +199,27 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 				if (sub_str[0] == 'A') {
 					switch (sub_str[1]) {
 						case 0:
-							pin = A0;
+							pin = (uint8_t)A0;
 							break;
 						case 1:
-							pin = A1;
+							pin = (uint8_t)A1;
 							break;
 						case 2:
-							pin = A2;
+							pin = (uint8_t)A2;
 							break;
 						case 3:
-							pin = A3;
+							pin = (uint8_t)A3;
 							break;
 						case 4:
-							pin = A4;
+							pin = (uint8_t)A4;
 							lcd.print("pin a4 found");
 							break;
 						case 5:
-							pin = A5;
+							pin = (uint8_t)A5;
 							break;
 						default:
 							lcd.print("no new pin found");
-							pin = A5;
+							pin = (uint8_t)A5;
 							break;
 					}
 					delay(1000);
@@ -222,23 +231,23 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 					}
 				}
 
-				sub_str = in_str.substring(in_str[1] + 1, in_str[2]);
-				if (sub_str == "Temperature Sensor") {
+				sub_str = in_str.substring(in_str[0] + 1, in_str[1]);
+				if (sub_str == "0") {
 					tempPin = pin;
 					EEPROM.update(8, tempPin);
-				} else if (sub_str == "Settings Display Button") {
+				} else if (sub_str == "1") {
 					switchSettingsPin = pin;
 					EEPROM.update(9, switchSettingsPin);
-				} else if (sub_str == "LED On/Off Button") {
+				} else if (sub_str == "2") {
 					switchLEDPin = pin;
 					EEPROM.update(10, switchLEDPin);
-				} else if (sub_str == "LED Red") {
+				} else if (sub_str == "3") {
 					redLEDPin = pin;
 					EEPROM.update(11, redLEDPin);
-				} else if (sub_str == "LED Green") {
+				} else if (sub_str == "4") {
 					greenLEDPin = pin;
 					EEPROM.update(12, greenLEDPin);
-				}  else if (sub_str == "LED Blue") {
+				}  else if (sub_str == "5") {
 					blueLEDPin = pin;
 					EEPROM.update(13, blueLEDPin);
 				}
