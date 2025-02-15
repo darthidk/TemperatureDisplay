@@ -34,6 +34,8 @@ int light_on = 1;
 int led_bounds[6];
 int led_lock = 0;
 
+bool startup_show_settings = true;
+
 // Degree symbol
 byte deg[8] = {
 	0b01110,
@@ -116,13 +118,14 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 			lcd.setCursor(0,1);
 			lcd.print("to settings");
 			delay(1000);
+			lcd.clear();
 			String in_str;
 			int eeprom_index = 0;
 			// Reading in settings updates from serial using the format below
 			// 	L|0|0|
 			// 	M|0|0|
 			// 	H|0|0|
-			// 	P|1|0|
+			// 	P|1|0|1|
 			//  ;
 			while (Serial.available() != 0) {
 				if ((isalpha(Serial.peek()) && ((in_str.length() != 0))) || Serial.peek() == ';') {
@@ -140,14 +143,21 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 						i++;
 					}
 					EEPROM.update(eeprom_index++, val.toInt());
-
-					in_str.remove(0, in_str.length());
+					
 					if (Serial.peek() == ';') {
-						while (Serial.available() != 0) {
-							Serial.read();
+						if (in_str.charAt(0) == 'P') {
+							startup_show_settings = in_str[in_str.length() - 2] -  '0';
+							EEPROM.update(14, startup_show_settings);
+							in_str.remove(0, in_str.length());
+							in_str.concat((char)Serial.read());
+						} else {
+							while (Serial.available() != 0) {
+								Serial.read();
+							}
+							break;
 						}
-						break;
 					} else {
+						in_str.remove(0, in_str.length());
 						in_str.concat((char)Serial.read());
 					}
 				} else {
@@ -256,6 +266,7 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 	7: lock led setting/disable button (def: 0)
 	8-10: Temperature/Settings Switch/LED Switch Pins
 	11-13: RGB Pins, in order
+	14: Show Settings on startup
 	*/
 void readSettings() {
 	for(int i = 0; i < 6; i++) {
@@ -271,6 +282,7 @@ void readSettings() {
 	redLEDPin = EEPROM.read(11);
 	greenLEDPin = EEPROM.read(12);
 	blueLEDPin = EEPROM.read(13);
+	startup_show_settings = EEPROM.read(14);
 }
 
 // Displays the current settings on the led screen
@@ -338,6 +350,11 @@ void displaySettings(int delay_time) {
 	lcd.print(blueLEDPin);
 
 	delay(delay_time);
+
+	lcd.clear();
+	lcd.setCursor(0,0);
+	lcd.write("Show Settings: ");
+	lcd.print(startup_show_settings);
 }
 
 // Initial code execution 
@@ -359,7 +376,9 @@ void setup() {
 	analogWrite(redLEDPin, 150 * light_on);
 	analogWrite(blueLEDPin, 150 * light_on);
 
-	displaySettings(500);
+	if (startup_show_settings == 1) {
+		displaySettings(500);
+	}
 
 	// * Code which can be used for testing each colour of the LED individually
 	// for(int k = 0; k < 3; k++) {
