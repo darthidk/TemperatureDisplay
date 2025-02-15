@@ -85,10 +85,9 @@ void tempListUpdates(int* time, float* hourTemp, float* tempList) {
 
 void splitter(String in_str, char splitter, int arr[], int total_splits) {
 	int num_found = 0;
-	for(unsigned int i = 0; i < in_str.length() && num_found != total_splits; i++) {
+	for(int i = 0; i < in_str.length(); i++) {
 		if (in_str.charAt(i) == splitter) {
-			num_found++;
-			arr[i] = in_str.charAt(i);
+			arr[num_found++] = i;
 		}
 	}
 }
@@ -103,18 +102,13 @@ void debuglcd(char in) {
 	delay(1000);
 }
 
-// Reading in settings updates from serial using the format below
-	// 	L|0|0|
-	// 	M|0|0|
-	// 	H|0|0|
-	// 	P|1|0|
-    //  ;
+
 int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 	if (!Serial || Serial.available() == 0) {
 		return 0;
 	} else {
 		char serial_classification = Serial.read();
-		debuglcd(serial_classification);
+		//debuglcd(serial_classification);
 		if (serial_classification == 'S') {
 			lcd.clear();
 			lcd.setCursor(0,0);
@@ -124,6 +118,12 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 			delay(1000);
 			String in_str;
 			int eeprom_index = 0;
+			// Reading in settings updates from serial using the format below
+			// 	L|0|0|
+			// 	M|0|0|
+			// 	H|0|0|
+			// 	P|1|0|
+			//  ;
 			while (Serial.available() != 0) {
 				if ((isalpha(Serial.peek()) && ((in_str.length() != 0))) || Serial.peek() == ';') {
 					int i = 2;
@@ -162,42 +162,26 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 			lcd.print("to pins");
 			delay(1000);
 			lcd.clear();
-			int i = 0;
 			while (Serial.available() != 0) {
-				// Input String should be 'A5|1|Temperature Sensor|'
+				// Input String should be 'A5|4|', 'pin|int coded for use|'
 				String in_str;
 
-				// int splits_found = 0;
-				// while (splits_found != 2) {
-				// 	if (Serial.peek() == '|') {
-				// 		splits_found++;
-				// 	}
-				// 	in_str += (char)Serial.read();
-				// }
-				
-				if (i == 16) {
-					i = 0;
-					lcd.clear();
-				} else {
-					lcd.print((char)Serial.read());
-					i++;
-					delay(500);
-					continue;
+				int splits_found = 0;
+				while (splits_found != 2) {
+					if (Serial.peek() == '|') {
+						splits_found++;
+					}
+					in_str += (char)Serial.read();
 				}
-
-				lcd.clear();
-				lcd.setCursor(0,0);
-				lcd.print(in_str);
-				delay(1000);
 				
 				int num_splits = 2;
 				int split_locations[num_splits];
 				splitter(in_str, '|', split_locations, num_splits);
 
-				String sub_str = in_str.substring(0, in_str[0]);
+				String sub_str = in_str.substring(0, split_locations[0]);
 				int pin;
 				if (sub_str[0] == 'A') {
-					switch (sub_str[1]) {
+					switch (static_cast<int> (sub_str[1]) - '0') {
 						case 0:
 							pin = (uint8_t)A0;
 							break;
@@ -212,26 +196,24 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 							break;
 						case 4:
 							pin = (uint8_t)A4;
-							lcd.print("pin a4 found");
 							break;
 						case 5:
 							pin = (uint8_t)A5;
 							break;
 						default:
-							lcd.print("no new pin found");
+							lcd.print("N");
 							pin = (uint8_t)A5;
 							break;
 					}
-					delay(1000);
 				} else if (sub_str[0] == 'D') {
 					if (sub_str[sub_str.length() - 1] == '~') {
-						pin = sub_str.substring(1, sub_str.length() - 2).toInt();
-					} else {
 						pin = sub_str.substring(1, sub_str.length() - 1).toInt();
+					} else {
+						pin = sub_str.substring(1, sub_str.length()).toInt();
 					}
 				}
 
-				sub_str = in_str.substring(in_str[0] + 1, in_str[1]);
+				sub_str = in_str.substring(split_locations[0] + 1, split_locations[1]);
 				if (sub_str == "0") {
 					tempPin = pin;
 					EEPROM.update(8, tempPin);
@@ -257,6 +239,7 @@ int serialReadUpdate(int* ledlist, int* led_power, int* led_lock) {
 			lcd.print("Clearing serial");
 			while(Serial.available() != 0) {
 				Serial.read();
+
 			}
 		}
 		lcd.clear();
@@ -527,7 +510,7 @@ void loop() {
 		}
 	}
 
-	// Button to display settings
+	//Button to display settings
 	if (switchSettingsState == HIGH) {
 		displaySettings(1000);
 	}
